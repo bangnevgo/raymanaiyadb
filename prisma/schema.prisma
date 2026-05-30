@@ -1,0 +1,172 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// === NORTH STAR GOALS ===
+model NorthStarGoal {
+  id          String   @id @default(cuid())
+  title       String
+  target      Int
+  current     Int      @default(0)
+  deadline    DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// === DAILY COMMAND CENTER ===
+model DailyPlan {
+  id           String   @id @default(cuid())
+  date         DateTime @unique
+  priority1    String?
+  priority2    String?
+  priority3    String?
+  notes        String?
+  reflection   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  timeBlocks   DailyTimeBlock[]
+  tasks        DailyTask[]
+}
+
+model DailyTimeBlock {
+  id         String   @id @default(cuid())
+  startTime  String
+  endTime    String
+  label      String
+  dayPlanId  String
+  dayPlan    DailyPlan @relation(fields: [dayPlanId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model DailyTask {
+  id        String   @id @default(cuid())
+  title     String
+  completed Boolean  @default(false)
+  dayPlanId String
+  dayPlan   DailyPlan @relation(fields: [dayPlanId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// === LEARNING TRACKER ===
+model LearningCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#6366f1")
+  items     LearningItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LearningItem {
+  id           String   @id @default(cuid())
+  title        String
+  categoryId   String
+  category     LearningCategory @relation(fields: [categoryId], references: [id])
+  progress     Int      @default(0)
+  hoursSpent   Float    @default(0)
+  notes        String?
+  streak       Int      @default(0)
+  lastStudied  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// === CERTIFICATION TRACKER ===
+model Certification {
+  id               String   @id @default(cuid())
+  name             String
+  provider         String
+  startDate        DateTime?
+  targetCompletion DateTime?
+  completionPct    Int      @default(0)
+  certificateUrl   String?
+  status           String   @default("Planned") // Planned, In Progress, Completed
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// === PORTFOLIO PROJECT TRACKER ===
+model PortfolioProject {
+  id             String   @id @default(cuid())
+  title          String
+  description    String?
+  skillsUsed     String?  // JSON array string
+  aiUsed         String?  // JSON array string
+  link           String?
+  completionDate DateTime?
+  status         String   @default("Idea") // Idea, Planning, Building, Review, Published
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// === JOB APPLICATION CRM ===
+model JobApplication {
+  id             String   @id @default(cuid())
+  company        String
+  position       String
+  country        String?
+  salaryRange    String?
+  jobLink        String?
+  applicationDate DateTime?
+  status         String   @default("Wishlist") // Wishlist, Applied, Assessment, Interview, Offer, Rejected, Accepted
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// === NETWORKING CRM ===
+model NetworkingConnection {
+  id              String   @id @default(cuid())
+  name            String
+  company         String?
+  role            String?
+  platform        String   @default("LinkedIn") // LinkedIn, Discord, X, Email, Community
+  connectionDate  DateTime?
+  lastInteraction DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// === INCOME TRACKER ===
+model IncomeEntry {
+  id        String   @id @default(cuid())
+  date      DateTime
+  source    String
+  category  String   @default("Freelance") // Freelance, Remote Job, Affiliate, Project, Other
+  amount    Float
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// === WEEKLY REVIEW ===
+model WeeklyReview {
+  id            String   @id @default(cuid())
+  weekStartDate DateTime
+  wins          String
+  learnings     String
+  challenges    String
+  nextGoals     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// === PERSONAL JOURNAL ===
+model JournalEntry {
+  id          String   @id @default(cuid())
+  date        DateTime @unique
+  reflection  String
+  mood        String   @default("Neutral") // Great, Good, Neutral, Bad, Terrible
+  energyLevel Int      @default(5) // 1-10
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
