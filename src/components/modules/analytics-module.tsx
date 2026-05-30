@@ -34,6 +34,7 @@ import {
   Users,
   TrendingUp,
 } from 'lucide-react';
+import { useAppStore } from '@/store/app-store';
 import type {
   DashboardSummary,
   LearningItem,
@@ -47,6 +48,7 @@ import type {
 const CHART_COLORS = ['#0d9488', '#f59e0b', '#8b5cf6', '#ef4444', '#3b82f6', '#ec4899', '#84cc16'];
 
 export function AnalyticsModule() {
+  const { formatCurrency, currency, exchangeRate } = useAppStore();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [learningItems, setLearningItems] = useState<LearningItem[]>([]);
   const [certs, setCerts] = useState<Certification[]>([]);
@@ -171,8 +173,13 @@ export function AnalyticsModule() {
     });
   }, [connections]);
 
-  const formatCurrency = (val: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+  const formatCurrencyChart = (val: number) => {
+    if (currency === 'IDR') {
+      const idr = val * exchangeRate;
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(idr);
+    }
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+  };
 
   const summaryCards = [
     {
@@ -466,7 +473,7 @@ export function AnalyticsModule() {
                   <XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
                   <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
                   <Tooltip
-                    formatter={(value: number) => [formatCurrency(value), 'Income']}
+                    formatter={(value: number) => [formatCurrencyChart(value), 'Income']}
                     contentStyle={{
                       backgroundColor: 'hsl(var(--popover))',
                       border: '1px solid hsl(var(--border))',

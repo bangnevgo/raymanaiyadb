@@ -6,9 +6,11 @@ import { db } from '@/lib/db';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { message, conversationHistory } = body as {
+    const { message, conversationHistory, currency, exchangeRate } = body as {
       message: string;
       conversationHistory?: Array<{ role: string; content: string }>;
+      currency?: string;
+      exchangeRate?: number;
     };
 
     // ───────────────────────────────────────────
@@ -197,6 +199,9 @@ export async function POST(request: Request) {
     // ───────────────────────────────────────────
     // 3. ASSEMBLE FULL CONTEXT
     // ───────────────────────────────────────────
+    const currentCurrency = currency || 'USD';
+    const currentRate = exchangeRate || 1;
+    
     const fullContext = {
       // USER PROFILE
       userProfile: {
@@ -204,6 +209,11 @@ export async function POST(request: Request) {
         ageGroup: '17-22 years old',
         background: 'Fresh graduate SMA, building career in digital/remote work',
         primaryObjective: 'Transform from fresh graduate to globally employable digital professional with remote income',
+        currency: currentCurrency,
+        exchangeRate: currentRate,
+        currencyNote: currentCurrency === 'IDR'
+          ? `User prefers IDR (Rupiah). All income amounts are stored in USD. 1 USD = ${currentRate} IDR (source: Bank Indonesia). When displaying income, convert to IDR by multiplying by ${currentRate}. Format IDR as "Rp" with no decimals (e.g., Rp57,895,500).`
+          : 'User uses USD for all currency displays.',
       },
 
       // NORTH STAR GOALS (annual targets)

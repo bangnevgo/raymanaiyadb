@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -39,8 +39,12 @@ import {
   Wallet,
   ArrowUpRight,
   ArrowDownRight,
+  RefreshCw,
+  Info,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAppStore } from '@/store/app-store';
+import type { Currency } from '@/store/app-store';
 
 interface IncomeEntry {
   id: string;
@@ -67,6 +71,18 @@ export function IncomeModule() {
   const [editingEntry, setEditingEntry] = useState<IncomeEntry | null>(null);
   const { toast } = useToast();
 
+  const {
+    currency,
+    setCurrency,
+    exchangeRate,
+    setExchangeRate,
+    rateSource,
+    setRateSource,
+    formatCurrency,
+    convertToDisplay,
+  } = useAppStore();
+
+  const [formCurrency, setFormCurrency] = useState<Currency>('IDR');
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     source: '',
@@ -74,6 +90,24 @@ export function IncomeModule() {
     amount: '',
     notes: '',
   });
+
+  // Fetch exchange rate on mount
+  const fetchExchangeRate = useCallback(async () => {
+    try {
+      const res = await fetch('/api/exchange-rate');
+      if (res.ok) {
+        const data = await res.json();
+        setExchangeRate(data.rate);
+        setRateSource(data.source);
+      }
+    } catch {
+      // Keep existing rate
+    }
+  }, [setExchangeRate, setRateSource]);
+
+  useEffect(() => {
+    fetchExchangeRate();
+  }, [fetchExchangeRate]);
 
   const fetchEntries = async () => {
     try {
@@ -91,19 +125,28 @@ export function IncomeModule() {
 
   useEffect(() => { fetchEntries(); }, []);
 
+  // Set form currency to match global currency
+  useEffect(() => { setFormCurrency(currency); }, [currency]);
+
   const resetForm = () => {
     setForm({ date: new Date().toISOString().split('T')[0], source: '', category: 'Freelance', amount: '', notes: '' });
     setEditingEntry(null);
+    setFormCurrency(currency);
   };
 
   const openAdd = () => { resetForm(); setDialogOpen(true); };
   const openEdit = (entry: IncomeEntry) => {
     setEditingEntry(entry);
+    // When editing, show the stored amount (always in USD in DB)
+    // If current currency is IDR, convert to IDR for display
+    const displayAmount = currency === 'IDR'
+      ? (entry.amount * exchangeRate).toFixed(0)
+      : entry.amount.toFixed(2);
     setForm({
       date: entry.date.split('T')[0],
       source: entry.source,
       category: entry.category,
-      amount: String(entry.amount),
+      amount: displayAmount,
       notes: entry.notes || '',
     });
     setDialogOpen(true);
@@ -115,9 +158,15 @@ export function IncomeModule() {
       return;
     }
     try {
+      // Convert input to USD for storage
+      const inputAmount = parseFloat(form.amount);
+      const usdAmount = formCurrency === 'IDR'
+        ? inputAmount / exchangeRate
+        : inputAmount;
+
       const body = {
         ...form,
-        amount: parseFloat(form.amount),
+        amount: usdAmount,
         ...(editingEntry ? { id: editingEntry.id } : {}),
       };
       const res = await fetch('/api/income', {
@@ -173,12 +222,58 @@ export function IncomeModule() {
     [entries]
   );
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-  };
-
   return (
     <div className="space-y-6">
+      {/* Currency Selector + Rate Info */}
+      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
+                <DollarSign className="size-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Mata Uang</p>
+                <p className="text-xs text-muted-foreground">Pilih mata uang untuk tampilan</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Select value={currency} onValueChange={(val) => setCurrency(val as Currency)}>
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="IDR">🇮🇩 IDR (Rupiah)</SelectItem>
+                  <SelectItem value="USD">🇺🇸 USD (Dollar)</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8"
+                onClick={fetchExchangeRate}
+                title="Refresh kurs"
+              >
+                <RefreshCw className="size-3.5" />
+              </Button>
+            </div>
+          </div>
+          {/* Exchange Rate Info */}
+          {currency === 'IDR' && (
+            <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground bg-background/50 rounded-lg px-3 py-2">
+              <Info className="size-3.5 shrink-0" />
+              <span>
+                <strong>1 USD = {exchangeRate.toLocaleString('id-ID')} IDR</strong>
+                {' '}({rateSource})
+              </span>
+              <span className="text-muted-foreground/60">
+                — Semua income disimpan dalam USD, dikonversi otomatis.
+              </span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
@@ -190,6 +285,9 @@ export function IncomeModule() {
               <div>
                 <p className="text-xs text-muted-foreground">Total Income</p>
                 <p className="text-2xl font-bold">{loading ? <Skeleton className="h-8 w-24" /> : formatCurrency(totalIncome)}</p>
+                {currency === 'IDR' && (
+                  <p className="text-[10px] text-muted-foreground">${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })} USD</p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -203,6 +301,9 @@ export function IncomeModule() {
               <div>
                 <p className="text-xs text-muted-foreground">This Month</p>
                 <p className="text-2xl font-bold">{loading ? <Skeleton className="h-8 w-24" /> : formatCurrency(monthlyIncome)}</p>
+                {currency === 'IDR' && (
+                  <p className="text-[10px] text-muted-foreground">${monthlyIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })} USD</p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -235,7 +336,12 @@ export function IncomeModule() {
                   <Badge variant="outline" className={CATEGORY_COLORS[cat] || ''}>
                     {cat}
                   </Badge>
-                  <span className="font-semibold">{formatCurrency(amount)}</span>
+                  <div className="text-right">
+                    <span className="font-semibold">{formatCurrency(amount)}</span>
+                    {currency === 'IDR' && (
+                      <p className="text-[10px] text-muted-foreground">${amount.toFixed(2)}</p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -294,9 +400,14 @@ export function IncomeModule() {
                       {entry.notes && ` · ${entry.notes}`}
                     </p>
                   </div>
-                  <p className="font-bold text-emerald-500 shrink-0">
-                    {formatCurrency(entry.amount)}
-                  </p>
+                  <div className="text-right shrink-0">
+                    <p className="font-bold text-emerald-500">
+                      {formatCurrency(entry.amount)}
+                    </p>
+                    {currency === 'IDR' && (
+                      <p className="text-[10px] text-muted-foreground">${entry.amount.toFixed(2)}</p>
+                    )}
+                  </div>
                   <div className="flex gap-1 shrink-0">
                     <Button variant="ghost" size="icon" className="size-8" onClick={() => openEdit(entry)}>
                       <Edit className="size-3.5" />
@@ -320,14 +431,49 @@ export function IncomeModule() {
             <DialogDescription>Track your earnings and income sources.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {/* Currency selector for input */}
+            <div className="space-y-2">
+              <Label>Input Currency</Label>
+              <div className="flex items-center gap-2">
+                <Select value={formCurrency} onValueChange={(val) => setFormCurrency(val as Currency)}>
+                  <SelectTrigger className="w-[130px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="IDR">🇮🇩 IDR</SelectItem>
+                    <SelectItem value="USD">🇺🇸 USD</SelectItem>
+                  </SelectContent>
+                </Select>
+                {formCurrency === 'IDR' && (
+                  <span className="text-xs text-muted-foreground">
+                    Rate: 1 USD = {exchangeRate.toLocaleString('id-ID')} IDR ({rateSource})
+                  </span>
+                )}
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="date">Date</Label>
                 <Input id="date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount ($)</Label>
-                <Input id="amount" type="number" step="0.01" min="0" placeholder="0.00" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+                <Label htmlFor="amount">
+                  Amount ({formCurrency})
+                </Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step={formCurrency === 'IDR' ? '1000' : '0.01'}
+                  min="0"
+                  placeholder={formCurrency === 'IDR' ? '500000' : '0.00'}
+                  value={form.amount}
+                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                />
+                {formCurrency === 'IDR' && form.amount && !isNaN(parseFloat(form.amount)) && parseFloat(form.amount) > 0 && (
+                  <p className="text-[10px] text-muted-foreground">
+                    ≈ ${(parseFloat(form.amount) / exchangeRate).toFixed(2)} USD
+                  </p>
+                )}
               </div>
             </div>
             <div className="space-y-2">

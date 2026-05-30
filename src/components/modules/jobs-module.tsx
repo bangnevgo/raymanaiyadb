@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { type JobApplication } from '@/types';
+import { useAppStore } from '@/store/app-store';
 import {
   Briefcase,
   Plus,
@@ -120,6 +121,7 @@ export function JobsModule() {
   const [sortCol, setSortCol] = useState<'company' | 'position' | 'status' | 'applicationDate' | 'salaryRange'>('applicationDate');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const { toast } = useToast();
+  const { currency } = useAppStore();
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -668,7 +670,7 @@ export function JobsModule() {
                 <Label htmlFor="add-salary">Salary Range</Label>
                 <Input
                   id="add-salary"
-                  placeholder="$80k–$120k"
+                  placeholder={currency === 'IDR' ? 'Rp10jt–Rp20jt' : '$80k–$120k'}
                   value={form.salaryRange}
                   onChange={(e) => setForm({ ...form, salaryRange: e.target.value })}
                 />

@@ -38,11 +38,20 @@ interface SummaryCard {
 }
 
 export function DashboardModule() {
-  const { setCurrentPage } = useAppStore();
+  const { setCurrentPage, formatCurrency } = useAppStore();
   const { toast } = useToast();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [recentGoals, setRecentGoals] = useState<{ title: string; progress: number }[]>([]);
+
+  // Fetch exchange rate on mount
+  const { setExchangeRate, setRateSource } = useAppStore();
+  useEffect(() => {
+    fetch('/api/exchange-rate')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) { setExchangeRate(data.rate); setRateSource(data.source); } })
+      .catch(() => {});
+  }, [setExchangeRate, setRateSource]);
 
   useEffect(() => {
     async function fetchSummary() {
@@ -113,7 +122,7 @@ export function DashboardModule() {
       {
         icon: DollarSign,
         label: 'Income Generated',
-        value: `$${summary.totalIncome.toLocaleString()}`,
+        value: formatCurrency(summary.totalIncome),
         bgClass: 'bg-teal-500/10 text-teal-500 dark:text-teal-400',
         key: 'income',
       },
@@ -318,7 +327,7 @@ export function DashboardModule() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">
-                          ${summary.totalIncome.toLocaleString()} total income
+                          {formatCurrency(summary.totalIncome)} total income
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {summary.journalEntries} journal entries

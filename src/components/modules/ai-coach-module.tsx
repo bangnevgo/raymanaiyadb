@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useAppStore } from '@/store/app-store';
 import {
   Card,
   CardContent,
@@ -83,6 +84,7 @@ const DATA_AWARENESS = [
 
 export function AiCoachModule() {
   const { toast } = useToast();
+  const { currency, exchangeRate } = useAppStore();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -129,6 +131,8 @@ export function AiCoachModule() {
         body: JSON.stringify({
           message: messageText.trim(),
           conversationHistory: history,
+          currency,
+          exchangeRate,
         }),
       });
 
