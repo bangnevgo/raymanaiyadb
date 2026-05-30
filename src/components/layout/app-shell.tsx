@@ -39,6 +39,7 @@ import {
   Bot,
   ChevronsUpDown,
   Flame,
+  MapPin,
 } from 'lucide-react';
 
 import { NotificationPanel } from '@/components/modules/notification-panel';
@@ -56,6 +57,7 @@ import { JournalModule } from '@/components/modules/journal-module';
 import { AnalyticsModule } from '@/components/modules/analytics-module';
 import { AiCoachModule } from '@/components/modules/ai-coach-module';
 import { HabitModule } from '@/components/modules/habit-module';
+import { ProgramTargetModule } from '@/components/modules/program-target-module';
 
 interface NavItem {
   page: Page;
@@ -87,6 +89,10 @@ const reviewNav: NavItem[] = [
   { page: 'journal', label: 'Journal', icon: PenLine },
   { page: 'analytics', label: 'Analytics', icon: BarChart3 },
   { page: 'ai-coach', label: 'AI Coach', icon: Bot },
+];
+
+const programNav: NavItem[] = [
+  { page: 'program-target', label: 'Program & Target', icon: MapPin },
 ];
 
 function NavSection({ label, items }: { label: string; items: NavItem[] }) {
@@ -152,6 +158,8 @@ function AppSidebar() {
         <NavSection label="Career" items={careerNav} />
         <SidebarSeparator />
         <NavSection label="Review" items={reviewNav} />
+        <SidebarSeparator />
+        <NavSection label="Program" items={programNav} />
       </SidebarContent>
 
       <SidebarFooter>
@@ -189,6 +197,7 @@ function PageRenderer() {
     analytics: <AnalyticsModule />,
     'ai-coach': <AiCoachModule />,
     habits: <HabitModule />,
+    'program-target': <ProgramTargetModule />,
   };
 
   return <>{modules[currentPage]}</>;
@@ -253,6 +262,10 @@ function PageHeader() {
     habits: {
       title: 'Habit Tracker',
       description: 'Track daily habits and build consistency',
+    },
+    'program-target': {
+      title: 'Program & Target',
+      description: 'Gap Year Accelerator Program 12 Bulan',
     },
   };
 
