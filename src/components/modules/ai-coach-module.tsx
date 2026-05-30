@@ -28,6 +28,8 @@ import {
   HeartPulse,
   Database,
   CheckCircle2,
+  X,
+  Trash2,
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -179,6 +181,20 @@ export function AiCoachModule() {
     }
   };
 
+  const dismissMessage = (id: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  const clearChat = () => {
+    setMessages([
+      {
+        id: 'welcome',
+        role: 'assistant',
+        content: `Hai! Saya AI Coach kamu di Nevgo Mission Control. 🚀\n\nSaya punya akses ke **SEMUA data** di dashboard kamu:\n\n• 🎯 **6 North Star Goals** — target tahunan dan progress\n• 📚 **Learning Tracker** — jam belajar, streak, progress per skill\n• 🏅 **Certifications** — status sertifikasi profesional\n• 💻 **Portfolio Projects** — pipeline dari Idea sampai Published\n• 💼 **Job Applications** — CRM pipeline 7 tahap\n• 🤝 **Networking** — 100+ koneksi profesional\n• 💰 **Income** — semua sumber pendapatan\n• 📝 **Weekly Reviews** — wins, learnings, challenges\n• 📓 **Journal** — mood, energy, reflections\n• 📅 **Daily Plans** — priorities, tasks, time blocks\n\nSaya menganalisis **pola lintas modul** — misalnya bagaimana mood mempengaruhi produktivitas, atau apakah learning kamu diterjemahkan ke portfolio.\n\nMau mulai dari mana? Pilih quick action di bawah, atau tanyakan apa saja!`,
+      },
+    ]);
+  };
+
   return (
     <div className="space-y-6">
       {/* Data Awareness Banner */}
@@ -251,9 +267,23 @@ export function AiCoachModule() {
                 Tanyakan apa saja tentang data, progress, goals, atau minta strategi.
               </CardDescription>
             </div>
-            <Badge variant="outline" className="text-[10px] shrink-0">
-              {messages.length - 1} messages
-            </Badge>
+            <div className="flex items-center gap-2">
+              {messages.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 text-[10px] text-muted-foreground hover:text-destructive"
+                  onClick={clearChat}
+                  title="Hapus semua chat"
+                >
+                  <Trash2 className="size-3" />
+                  Hapus Chat
+                </Button>
+              )}
+              <Badge variant="outline" className="text-[10px] shrink-0">
+                {messages.length - 1} messages
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <Separator className="mx-6" />
@@ -281,15 +311,27 @@ export function AiCoachModule() {
                     )}
                   </div>
                   {/* Bubble */}
-                  <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                      msg.role === 'user'
-                        ? 'bg-primary text-primary-foreground rounded-br-md'
-                        : 'bg-muted/80 border border-border/50 rounded-bl-md'
-                    }`}
-                  >
-                    <div className="text-sm whitespace-pre-wrap leading-relaxed prose prose-sm dark:prose-invert max-w-none [&_strong]:font-semibold [&_strong]:text-primary [&_li]:marker:text-primary/50">
-                      {msg.content}
+                  <div className="relative max-w-[85%]">
+                    {/* Close button for assistant messages (not welcome) */}
+                    {msg.role === 'assistant' && msg.id !== 'welcome' && (
+                      <button
+                        onClick={() => dismissMessage(msg.id)}
+                        className="absolute -top-1.5 -right-1.5 z-10 flex size-5 items-center justify-center rounded-full bg-border text-muted-foreground shadow-sm hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                        title="Tutup pesan"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    )}
+                    <div
+                      className={`rounded-2xl px-4 py-3 ${
+                        msg.role === 'user'
+                          ? 'bg-primary text-primary-foreground rounded-br-md'
+                          : 'bg-muted/80 border border-border/50 rounded-bl-md'
+                      }`}
+                    >
+                      <div className="text-sm whitespace-pre-wrap leading-relaxed prose prose-sm dark:prose-invert max-w-none [&_strong]:font-semibold [&_strong]:text-primary [&_li]:marker:text-primary/50">
+                        {msg.content}
+                      </div>
                     </div>
                   </div>
                 </div>
