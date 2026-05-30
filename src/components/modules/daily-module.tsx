@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Card,
@@ -38,6 +38,10 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
+  Timer,
+  Play,
+  Pause,
+  RotateCcw,
 } from 'lucide-react';
 import type { DailyPlan, DailyTask, DailyTimeBlock } from '@/types';
 
@@ -73,6 +77,85 @@ export function DailyModule() {
   const [notes, setNotes] = useState('');
   const [reflection, setReflection] = useState('');
   const [newTaskTitle, setNewTaskTitle] = useState('');
+
+  // Pomodoro Timer state
+  const POMODORO_MODES = {
+    focus: { label: 'Focus', duration: 25 * 60, color: 'text-primary', stroke: 'stroke-primary', bg: 'bg-primary/10' },
+    short: { label: 'Short Break', duration: 5 * 60, color: 'text-emerald-600 dark:text-emerald-400', stroke: 'stroke-emerald-500', bg: 'bg-emerald-500/10' },
+    long: { label: 'Long Break', duration: 15 * 60, color: 'text-sky-600 dark:text-sky-400', stroke: 'stroke-sky-500', bg: 'bg-sky-500/10' },
+  } as const;
+
+  const [pomodoroTime, setPomodoroTime] = useState(25 * 60);
+  const [pomodoroRunning, setPomodoroRunning] = useState(false);
+  const [pomodoroMode, setPomodoroMode] = useState<'focus' | 'short' | 'long'>('focus');
+  const [pomodoroSessions, setPomodoroSessions] = useState(0);
+  const [pomodoroTotal, setPomodoroTotal] = useState(25 * 60);
+  const [pomodoroFlash, setPomodoroFlash] = useState(false);
+  const pomodoroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const pomodoroProgress = pomodoroTotal > 0 ? ((pomodoroTotal - pomodoroTime) / pomodoroTotal) * 100 : 0;
+  const circumference = 2 * Math.PI * 45;
+  const strokeDashoffset = circumference - (pomodoroProgress / 100) * circumference;
+
+  const switchPomodoroMode = useCallback((mode: 'focus' | 'short' | 'long') => {
+    if (pomodoroIntervalRef.current) {
+      clearInterval(pomodoroIntervalRef.current);
+      pomodoroIntervalRef.current = null;
+    }
+    setPomodoroMode(mode);
+    setPomodoroRunning(false);
+    const duration = POMODORO_MODES[mode].duration;
+    setPomodoroTime(duration);
+    setPomodoroTotal(duration);
+  }, []);
+
+  const resetPomodoro = useCallback(() => {
+    if (pomodoroIntervalRef.current) {
+      clearInterval(pomodoroIntervalRef.current);
+      pomodoroIntervalRef.current = null;
+    }
+    setPomodoroRunning(false);
+    const duration = POMODORO_MODES[pomodoroMode].duration;
+    setPomodoroTime(duration);
+    setPomodoroTotal(duration);
+  }, [pomodoroMode]);
+
+  useEffect(() => {
+    if (pomodoroRunning) {
+      pomodoroIntervalRef.current = setInterval(() => {
+        setPomodoroTime((prev) => {
+          if (prev <= 1) {
+            if (pomodoroIntervalRef.current) {
+              clearInterval(pomodoroIntervalRef.current);
+              pomodoroIntervalRef.current = null;
+            }
+            setPomodoroRunning(false);
+            if (pomodoroMode === 'focus') {
+              setPomodoroSessions((s) => s + 1);
+              toast({ title: '🎯 Focus session complete!', description: 'Great work! Time for a break.' });
+            } else {
+              toast({ title: '☕ Break is over!', description: 'Ready for another focus session?' });
+            }
+            setPomodoroFlash(true);
+            setTimeout(() => setPomodoroFlash(false), 2000);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (pomodoroIntervalRef.current) {
+        clearInterval(pomodoroIntervalRef.current);
+        pomodoroIntervalRef.current = null;
+      }
+    }
+    return () => {
+      if (pomodoroIntervalRef.current) {
+        clearInterval(pomodoroIntervalRef.current);
+        pomodoroIntervalRef.current = null;
+      }
+    };
+  }, [pomodoroRunning, pomodoroMode, toast]);
 
   // Timeblock dialog
   const [tbDialogOpen, setTbDialogOpen] = useState(false);
@@ -525,6 +608,132 @@ export function DailyModule() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Pomodoro Focus Timer */}
+          <Card className={`transition-colors duration-300 ${pomodoroFlash ? 'ring-2 ring-primary/50 shadow-lg shadow-primary/10' : ''}`}>
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Timer className="size-4 text-primary" />
+                  Pomodoro Focus Timer
+                </CardTitle>
+                <div className="flex items-center gap-1.5">
+                  <Badge variant="secondary" className="text-xs">
+                    {pomodoroSessions} session{pomodoroSessions !== 1 ? 's' : ''} completed
+                  </Badge>
+                </div>
+              </div>
+              <CardDescription>Stay focused and take regular breaks</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center gap-5">
+                {/* Mode selector pills */}
+                <div className="flex gap-1.5 rounded-lg bg-muted p-1">
+                  {(['focus', 'short', 'long'] as const).map((mode) => {
+                    const isActive = pomodoroMode === mode;
+                    const modeConfig = POMODORO_MODES[mode];
+                    return (
+                      <button
+                        key={mode}
+                        onClick={() => switchPomodoroMode(mode)}
+                        className={`relative rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                          isActive
+                            ? `text-foreground shadow-sm bg-background`
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {modeConfig.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Circular progress + time display */}
+                <div className="relative flex items-center justify-center">
+                  <svg
+                    className="transform -rotate-90"
+                    width="130"
+                    height="130"
+                    viewBox="0 0 100 100"
+                  >
+                    {/* Background circle */}
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      className="text-muted/30"
+                    />
+                    {/* Progress circle */}
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      fill="none"
+                      strokeWidth="4"
+                      strokeLinecap="round"
+                      className={`${POMODORO_MODES[pomodoroMode].stroke} transition-all duration-1000 ease-linear`}
+                      strokeDasharray={circumference}
+                      strokeDashoffset={strokeDashoffset}
+                    />
+                  </svg>
+                  {/* Time display centered inside circle */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className={`text-3xl font-bold tabular-nums tracking-tight ${POMODORO_MODES[pomodoroMode].color}`}>
+                      {String(Math.floor(pomodoroTime / 60)).padStart(2, '0')}:
+                      {String(pomodoroTime % 60).padStart(2, '0')}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">
+                      {POMODORO_MODES[pomodoroMode].label}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Controls */}
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-10"
+                    onClick={resetPomodoro}
+                    title="Reset timer"
+                  >
+                    <RotateCcw className="size-4" />
+                  </Button>
+                  <Button
+                    size="lg"
+                    className={`size-12 rounded-full ${pomodoroRunning ? POMODORO_MODES[pomodoroMode].bg : ''}`}
+                    onClick={() => setPomodoroRunning((r) => !r)}
+                  >
+                    {pomodoroRunning ? (
+                      <Pause className="size-5" />
+                    ) : (
+                      <Play className="size-5 ml-0.5" />
+                    )}
+                  </Button>
+                  <div className="size-10" /> {/* Spacer for visual balance */}
+                </div>
+
+                {/* Session progress dots */}
+                {pomodoroSessions > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground mr-1">Sessions:</span>
+                    {Array.from({ length: Math.min(pomodoroSessions, 12) }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="size-2 rounded-full bg-primary"
+                      />
+                    ))}
+                    {pomodoroSessions > 12 && (
+                      <span className="text-xs text-muted-foreground">+{pomodoroSessions - 12}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Save Button */}
           <div className="flex justify-end">

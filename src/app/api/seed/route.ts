@@ -17,6 +17,8 @@ function todayStr(): string {
 export async function POST() {
   try {
     // Clear existing data (reverse order of dependencies)
+    await db.habitEntry.deleteMany();
+    await db.habit.deleteMany();
     await db.dailyTask.deleteMany();
     await db.dailyTimeBlock.deleteMany();
     await db.dailyPlan.deleteMany();
@@ -952,6 +954,68 @@ export async function POST() {
       db.dailyTask.create({ data: { title: '30 min exercise', completed: true, dayPlanId: dailyPlan.id } }),
     ]);
 
+    // ==========================================
+    // 11. HABIT TRACKER (5 habits + 21 days of entries)
+    // ==========================================
+    const habitSeed = [
+      { title: 'Morning Exercise', emoji: '🏋️', frequency: 'daily' as const, color: '#f97316' },
+      { title: 'Read 30 minutes', emoji: '📖', frequency: 'daily' as const, color: '#10b981' },
+      { title: 'Practice English', emoji: '🗣️', frequency: 'weekdays' as const, color: '#8b5cf6' },
+      { title: 'Meditate', emoji: '🧘', frequency: 'daily' as const, color: '#06b6d4' },
+      { title: 'Code for 2+ hours', emoji: '💻', frequency: 'daily' as const, color: '#ec4899' },
+    ];
+
+    const seededHabits = await Promise.all(
+      habitSeed.map((h) =>
+        db.habit.create({
+          data: { title: h.title, emoji: h.emoji, frequency: h.frequency, color: h.color },
+        })
+      )
+    );
+
+    // Generate entries for last 21 days with ~70% completion rate
+    const habitEntriesData: { habitId: string; date: Date; completed: boolean }[] = [];
+    const seededDays = 21;
+    // Use a seeded pseudo-random for consistency
+    const rand = (seed: number) => {
+      let x = Math.sin(seed) * 10000;
+      return x - Math.floor(x);
+    };
+
+    for (let d = seededDays - 1; d >= 0; d--) {
+      const entryDate = daysAgo(d);
+      const dow = entryDate.getDay();
+      const isWeekend = dow === 0 || dow === 6;
+
+      for (let h = 0; h < seededHabits.length; h++) {
+        const habit = seededHabits[h];
+        // Skip weekends for weekday-only habits
+        if (habit.frequency === 'weekdays' && isWeekend) continue;
+
+        const r = rand(d * 7 + h * 13 + 42);
+        const completed = r < 0.70;
+
+        habitEntriesData.push({
+          habitId: habit.id,
+          date: entryDate,
+          completed,
+        });
+      }
+    }
+
+    // Batch create entries (SQLite handles this fine)
+    await Promise.all(
+      habitEntriesData.map((entry) =>
+        db.habitEntry.create({
+          data: {
+            habitId: entry.habitId,
+            date: entry.date,
+            completed: entry.completed,
+          },
+        })
+      )
+    );
+
     return NextResponse.json({
       success: true,
       counts: {
@@ -968,6 +1032,8 @@ export async function POST() {
         dailyPlan: 1,
         timeBlocks: 12,
         tasks: 9,
+        habits: seededHabits.length,
+        habitEntries: habitEntriesData.length,
       },
     });
   } catch (error) {

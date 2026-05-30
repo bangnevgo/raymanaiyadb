@@ -123,6 +123,22 @@ export interface JournalEntry {
   energyLevel: number;
 }
 
+export interface Habit {
+  id: string;
+  title: string;
+  emoji: string;
+  frequency: string;
+  color: string;
+  entries?: HabitEntry[];
+}
+
+export interface HabitEntry {
+  id: string;
+  date: string;
+  completed: boolean;
+  habitId: string;
+}
+
 export interface DashboardSummary {
   totalLearningHours: number;
   certificationsCompleted: number;

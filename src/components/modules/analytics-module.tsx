@@ -33,6 +33,8 @@ import {
   DollarSign,
   Users,
   TrendingUp,
+  Download,
+  Target,
 } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import type {
@@ -43,7 +45,9 @@ import type {
   JobApplication,
   NetworkingConnection,
   IncomeEntry,
+  NorthStarGoal,
 } from '@/types';
+import { exportToCSV } from '@/lib/export-csv';
 
 const CHART_COLORS = ['#0d9488', '#f59e0b', '#8b5cf6', '#ef4444', '#3b82f6', '#ec4899', '#84cc16'];
 
@@ -56,12 +60,13 @@ export function AnalyticsModule() {
   const [jobs, setJobs] = useState<JobApplication[]>([]);
   const [connections, setConnections] = useState<NetworkingConnection[]>([]);
   const [income, setIncome] = useState<IncomeEntry[]>([]);
+  const [goals, setGoals] = useState<NorthStarGoal[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [summaryRes, learningRes, certRes, projRes, jobsRes, connRes, incomeRes] =
+        const [summaryRes, learningRes, certRes, projRes, jobsRes, connRes, incomeRes, goalsRes] =
           await Promise.all([
             fetch('/api/summary'),
             fetch('/api/learning/items'),
@@ -70,6 +75,7 @@ export function AnalyticsModule() {
             fetch('/api/jobs'),
             fetch('/api/networking'),
             fetch('/api/income'),
+            fetch('/api/goals'),
           ]);
 
         if (summaryRes.ok) setSummary(await summaryRes.json());
@@ -79,6 +85,7 @@ export function AnalyticsModule() {
         if (jobsRes.ok) setJobs(await jobsRes.json());
         if (connRes.ok) setConnections(await connRes.json());
         if (incomeRes.ok) setIncome(await incomeRes.json());
+        if (goalsRes.ok) setGoals(await goalsRes.json());
       } catch {
         // silently fail
       } finally {
@@ -226,6 +233,77 @@ export function AnalyticsModule() {
     },
   ];
 
+  // --- Export handlers ---
+  const handleExportIncome = () => {
+    const isIDR = currency === 'IDR';
+    const amountCol = isIDR ? 'Amount (IDR)' : 'Amount (USD)';
+    const rows = income.map((e) => ({
+      Date: e.date,
+      Source: e.source,
+      Category: e.category,
+      [amountCol]: isIDR
+        ? Math.round(e.amount * exchangeRate).toLocaleString('id-ID')
+        : e.amount.toFixed(2),
+    }));
+    exportToCSV(
+      rows as unknown as Record<string, unknown>[],
+      'income-report.csv',
+      ['Date', 'Source', 'Category', amountCol],
+    );
+  };
+
+  const handleExportProgress = () => {
+    const rows = goals.map((g) => {
+      const pct = g.target > 0 ? Math.round((g.current / g.target) * 100) : 0;
+      return {
+        Title: g.title,
+        Current: g.current,
+        Target: g.target,
+        'Completion (%)': `${pct}%`,
+        Deadline: g.deadline
+          ? new Date(g.deadline).toLocaleDateString('en-US')
+          : '—',
+      };
+    });
+    exportToCSV(
+      rows as unknown as Record<string, unknown>[],
+      'progress-report.csv',
+      ['Title', 'Current', 'Target', 'Completion (%)', 'Deadline'],
+    );
+  };
+
+  const handleExportLearning = () => {
+    const rows = learningItems.map((item) => ({
+      Title: item.title,
+      Category: item.category?.name ?? 'Uncategorized',
+      'Progress (%)': `${item.progress}%`,
+      'Hours Spent': item.hoursSpent,
+      'Streak (days)': item.streak,
+    }));
+    exportToCSV(
+      rows as unknown as Record<string, unknown>[],
+      'learning-report.csv',
+      ['Title', 'Category', 'Progress (%)', 'Hours Spent', 'Streak (days)'],
+    );
+  };
+
+  const handleExportJobs = () => {
+    const rows = jobs.map((j) => ({
+      Company: j.company,
+      Position: j.position,
+      Status: j.status,
+      'Application Date': j.applicationDate
+        ? new Date(j.applicationDate).toLocaleDateString('en-US')
+        : '—',
+      'Salary Range': j.salaryRange ?? '—',
+    }));
+    exportToCSV(
+      rows as unknown as Record<string, unknown>[],
+      'job-applications.csv',
+      ['Company', 'Position', 'Status', 'Application Date', 'Salary Range'],
+    );
+  };
+
   const hasData = learningItems.length > 0 || projects.length > 0 || jobs.length > 0 || income.length > 0 || connections.length > 0 || certs.length > 0;
 
   if (loading) {
@@ -273,6 +351,91 @@ export function AnalyticsModule() {
           </Card>
         ))}
       </div>
+
+      {/* Export Data */}
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Download className="size-5 text-primary" />
+            Export Data
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Income Report */}
+            <button
+              onClick={handleExportIncome}
+              disabled={income.length === 0}
+              className="flex items-center gap-3 rounded-lg border border-border/60 p-3 text-left transition-all hover:border-primary/40 hover:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-border/60 disabled:hover:shadow-none group"
+            >
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/10">
+                <DollarSign className="size-5 text-emerald-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium leading-tight">Export Income Report</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {income.length} {income.length === 1 ? 'entry' : 'entries'}
+                </p>
+              </div>
+              <Download className="ml-auto size-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+            </button>
+
+            {/* Progress Report */}
+            <button
+              onClick={handleExportProgress}
+              disabled={goals.length === 0}
+              className="flex items-center gap-3 rounded-lg border border-border/60 p-3 text-left transition-all hover:border-primary/40 hover:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-border/60 disabled:hover:shadow-none group"
+            >
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500/20 to-violet-600/10">
+                <Target className="size-5 text-violet-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium leading-tight">Export Progress Report</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {goals.length} {goals.length === 1 ? 'goal' : 'goals'}
+                </p>
+              </div>
+              <Download className="ml-auto size-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+            </button>
+
+            {/* Learning Report */}
+            <button
+              onClick={handleExportLearning}
+              disabled={learningItems.length === 0}
+              className="flex items-center gap-3 rounded-lg border border-border/60 p-3 text-left transition-all hover:border-primary/40 hover:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-border/60 disabled:hover:shadow-none group"
+            >
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-600/10">
+                <BookOpen className="size-5 text-amber-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium leading-tight">Export Learning Report</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {learningItems.length} {learningItems.length === 1 ? 'item' : 'items'}
+                </p>
+              </div>
+              <Download className="ml-auto size-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+            </button>
+
+            {/* Job Applications */}
+            <button
+              onClick={handleExportJobs}
+              disabled={jobs.length === 0}
+              className="flex items-center gap-3 rounded-lg border border-border/60 p-3 text-left transition-all hover:border-primary/40 hover:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-border/60 disabled:hover:shadow-none group"
+            >
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500/20 to-rose-600/10">
+                <Briefcase className="size-5 text-rose-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium leading-tight">Export Job Applications</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {jobs.length} {jobs.length === 1 ? 'application' : 'applications'}
+                </p>
+              </div>
+              <Download className="ml-auto size-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+            </button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

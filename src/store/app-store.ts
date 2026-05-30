@@ -3,7 +3,7 @@ import { create } from 'zustand';
 type Page =
   | 'dashboard' | 'goals' | 'daily' | 'learning' | 'certifications'
   | 'portfolio' | 'jobs' | 'networking' | 'income'
-  | 'reviews' | 'journal' | 'analytics' | 'ai-coach';
+  | 'reviews' | 'journal' | 'analytics' | 'ai-coach' | 'habits';
 
 type Currency = 'USD' | 'IDR';
 

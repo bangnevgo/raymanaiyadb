@@ -38,8 +38,10 @@ import {
   BarChart3,
   Bot,
   ChevronsUpDown,
+  Flame,
 } from 'lucide-react';
 
+import { NotificationPanel } from '@/components/modules/notification-panel';
 import { DashboardModule } from '@/components/modules/dashboard-module';
 import { GoalsModule } from '@/components/modules/goals-module';
 import { DailyModule } from '@/components/modules/daily-module';
@@ -53,6 +55,7 @@ import { ReviewsModule } from '@/components/modules/reviews-module';
 import { JournalModule } from '@/components/modules/journal-module';
 import { AnalyticsModule } from '@/components/modules/analytics-module';
 import { AiCoachModule } from '@/components/modules/ai-coach-module';
+import { HabitModule } from '@/components/modules/habit-module';
 
 interface NavItem {
   page: Page;
@@ -64,6 +67,7 @@ const mainNav: NavItem[] = [
   { page: 'dashboard', label: 'Dashboard', icon: Rocket },
   { page: 'goals', label: 'North Star Goals', icon: Target },
   { page: 'daily', label: 'Daily Command Center', icon: Calendar },
+  { page: 'habits', label: 'Habit Tracker', icon: Flame },
 ];
 
 const growthNav: NavItem[] = [
@@ -184,6 +188,7 @@ function PageRenderer() {
     journal: <JournalModule />,
     analytics: <AnalyticsModule />,
     'ai-coach': <AiCoachModule />,
+    habits: <HabitModule />,
   };
 
   return <>{modules[currentPage]}</>;
@@ -245,16 +250,23 @@ function PageHeader() {
       title: 'AI Coach',
       description: 'Get personalized guidance',
     },
+    habits: {
+      title: 'Habit Tracker',
+      description: 'Track daily habits and build consistency',
+    },
   };
 
   const { title, description } = titles[currentPage];
 
   return (
     <header className="flex flex-col gap-1 border-b px-6 py-4">
-      <div className="flex items-center gap-2">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mr-2 h-4" />
-        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+        </div>
+        <NotificationPanel />
       </div>
       <p className="text-sm text-muted-foreground pl-8">{description}</p>
     </header>

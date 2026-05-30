@@ -170,3 +170,29 @@ model JournalEntry {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// === HABIT TRACKER ===
+model Habit {
+  id          String   @id @default(cuid())
+  title       String
+  emoji       String   @default("✅")
+  frequency   String   @default("daily") // daily, weekdays, custom
+  color       String   @default("#6366f1")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  entries     HabitEntry[]
+}
+
+model HabitEntry {
+  id        String   @id @default(cuid())
+  date      DateTime
+  completed Boolean  @default(false)
+  habitId   String
+  habit     Habit     @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([habitId, date])
+}
+
