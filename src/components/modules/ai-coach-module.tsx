@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Card,
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import {
   Bot,
   Send,
@@ -22,6 +23,10 @@ import {
   ClipboardList,
   Target,
   Briefcase,
+  Brain,
+  HeartPulse,
+  Database,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -34,23 +39,46 @@ const QUICK_ACTIONS = [
   {
     label: 'Analyze My Progress',
     icon: TrendingUp,
-    message: 'Analyze my overall progress across all areas — goals, learning, certifications, projects, and income. Give me a comprehensive progress report.',
+    message: 'Analyze my overall progress across ALL areas — goals, learning, certifications, projects, job applications, networking, income, and wellbeing. Give me a comprehensive progress report with specific numbers and tell me what patterns you see across different modules.',
   },
   {
-    label: 'Weekly Summary',
+    label: 'Weekly Strategy',
     icon: ClipboardList,
-    message: 'Give me a weekly summary of my activities. What did I accomplish, what needs attention, and what should I focus on next week?',
+    message: 'Look at my daily plans, weekly reviews, journal entries, and current goals. What should be my top priorities this week? Consider my deadlines, stalled learning items, job pipeline, and mood/energy patterns.',
   },
   {
-    label: 'Priority Recommendations',
-    icon: Target,
-    message: 'Based on my current data, what should be my top priorities right now? Consider my goals, deadlines, and areas that need improvement.',
-  },
-  {
-    label: 'Career Advice',
+    label: 'Career Analysis',
     icon: Briefcase,
-    message: 'Give me career advice based on my job applications, skills, certifications, and networking connections. What should I do next to advance?',
+    message: 'Analyze my entire career pipeline: job applications, certifications, portfolio projects, skills, networking connections, and income. Am I ready for remote work? What gaps do I need to fill? Give me specific steps to get closer to landing a remote job.',
   },
+  {
+    label: 'Wellbeing Check',
+    icon: HeartPulse,
+    message: 'Analyze my journal mood entries, energy levels, daily task completion rates, learning streaks, and weekly review challenges. How is my mental health and consistency? Am I at risk of burnout? Give me honest feedback.',
+  },
+  {
+    label: 'Income Strategy',
+    icon: Target,
+    message: 'Look at my income entries, freelance projects, job applications pipeline, and skills. Help me build a strategy to increase my income. What should I focus on — more freelancing? More job applications? What skills should I monetize?',
+  },
+  {
+    label: 'Deep Insights',
+    icon: Brain,
+    message: 'Do a deep cross-module analysis. Look for patterns I might not see: correlation between my mood and productivity, whether my learning translates to portfolio projects, whether my networking leads to job opportunities, and any other hidden patterns in my data.',
+  },
+];
+
+const DATA_AWARENESS = [
+  { label: 'Goals', icon: Target },
+  { label: 'Learning', icon: Brain },
+  { label: 'Certifications', icon: CheckCircle2 },
+  { label: 'Portfolio', icon: Sparkles },
+  { label: 'Job Apps', icon: Briefcase },
+  { label: 'Network', icon: User },
+  { label: 'Income', icon: TrendingUp },
+  { label: 'Journal', icon: HeartPulse },
+  { label: 'Reviews', icon: ClipboardList },
+  { label: 'Daily Plans', icon: Target },
 ];
 
 export function AiCoachModule() {
@@ -59,8 +87,7 @@ export function AiCoachModule() {
     {
       id: 'welcome',
       role: 'assistant',
-      content:
-        "Hi! I'm your AI Coach. I can analyze your goals, learning progress, job applications, and more to give you personalized guidance.\n\nTry one of the quick actions above, or type your own question!",
+      content: `Hai! Saya AI Coach kamu di Nevgo Mission Control. 🚀\n\nSaya punya akses ke **SEMUA data** di dashboard kamu:\n\n• 🎯 **6 North Star Goals** — target tahunan dan progress\n• 📚 **Learning Tracker** — jam belajar, streak, progress per skill\n• 🏅 **Certifications** — status sertifikasi profesional\n• 💻 **Portfolio Projects** — pipeline dari Idea sampai Published\n• 💼 **Job Applications** — CRM pipeline 7 tahap\n• 🤝 **Networking** — 100+ koneksi profesional\n• 💰 **Income** — semua sumber pendapatan\n• 📝 **Weekly Reviews** — wins, learnings, challenges\n• 📓 **Journal** — mood, energy, reflections\n• 📅 **Daily Plans** — priorities, tasks, time blocks\n\nSaya menganalisis **pola lintas modul** — misalnya bagaimana mood mempengaruhi produktivitas, atau apakah learning kamu diterjemahkan ke portfolio.\n\nMau mulai dari mana? Pilih quick action di bawah, atau tanyakan apa saja!`,
     },
   ]);
   const [input, setInput] = useState('');
@@ -68,12 +95,14 @@ export function AiCoachModule() {
   const scrollEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
-    scrollEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => {
+      scrollEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   }, [messages, loading]);
 
-  const sendMessage = async (messageText: string) => {
+  const sendMessage = useCallback(async (messageText: string) => {
     if (!messageText.trim() || loading) return;
 
     const userMessage: ChatMessage = {
@@ -82,17 +111,24 @@ export function AiCoachModule() {
       content: messageText.trim(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput('');
     setLoading(true);
 
     try {
+      // Send conversation history (last 10 messages) for context continuity
+      const history = updatedMessages.slice(-10).map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
       const res = await fetch('/api/ai-coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: messageText.trim(),
-          focusArea: null,
+          conversationHistory: history,
         }),
       });
 
@@ -101,30 +137,31 @@ export function AiCoachModule() {
         const aiMessage: ChatMessage = {
           id: `ai-${Date.now()}`,
           role: 'assistant',
-          content: data.advice || 'I couldn\'t generate a response. Please try again.',
+          content: data.advice || 'Maaf, saya tidak bisa menghasilkan respons saat ini. Silakan coba lagi.',
         };
         setMessages((prev) => [...prev, aiMessage]);
       } else {
+        const errorData = await res.json().catch(() => null);
         const aiMessage: ChatMessage = {
           id: `ai-error-${Date.now()}`,
           role: 'assistant',
-          content: 'Sorry, I encountered an error. Please try again.',
+          content: `Maaf, terjadi error${errorData?.error ? `: ${errorData.error}` : ''}. Silakan coba lagi.`,
         };
         setMessages((prev) => [...prev, aiMessage]);
-        toast({ title: 'AI Coach failed to respond', variant: 'destructive' });
+        toast({ title: 'AI Coach Error', description: 'Gagal menghasilkan respons', variant: 'destructive' });
       }
     } catch {
       const aiMessage: ChatMessage = {
         id: `ai-error-${Date.now()}`,
         role: 'assistant',
-        content: 'Sorry, I couldn\'t connect. Please check your connection and try again.',
+        content: 'Maaf, tidak bisa terhubung ke server. Silakan cek koneksi dan coba lagi.',
       };
       setMessages((prev) => [...prev, aiMessage]);
-      toast({ title: 'Connection error', variant: 'destructive' });
+      toast({ title: 'Koneksi Error', description: 'Tidak dapat terhubung ke AI Coach', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
-  };
+  }, [loading, messages, toast]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,29 +177,52 @@ export function AiCoachModule() {
 
   return (
     <div className="space-y-6">
+      {/* Data Awareness Banner */}
+      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <Database className="size-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">Full Dashboard Access</p>
+              <p className="text-xs text-muted-foreground mb-2">
+                AI Coach menganalisis data real-time dari seluruh dashboard kamu, mencari pola lintas modul, dan memberikan rekomendasi yang dipersonalisasi.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {DATA_AWARENESS.map((item) => (
+                  <Badge key={item.label} variant="secondary" className="text-[10px] gap-1 px-2 py-0.5">
+                    <item.icon className="size-3" />
+                    {item.label}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Quick Actions */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="size-5" />
-            Quick Actions
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="size-4" />
+            Quick Analysis
           </CardTitle>
-          <CardDescription>
-            Get instant insights with one click.
-          </CardDescription>
+          <CardDescription>Klik untuk analisis instan berdasarkan data kamu.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             {QUICK_ACTIONS.map((action) => (
               <Button
                 key={action.label}
                 variant="outline"
-                className="h-auto py-3 px-4 flex flex-col items-center gap-2 text-center hover:border-primary/50 hover:bg-primary/5 transition-all"
+                className="h-auto py-2.5 px-3 flex flex-col items-center gap-1.5 text-center hover:border-primary/50 hover:bg-primary/5 transition-all group"
                 onClick={() => sendMessage(action.message)}
                 disabled={loading}
               >
-                <action.icon className="size-5 text-primary" />
-                <span className="text-xs font-medium">{action.label}</span>
+                <action.icon className="size-4 text-primary group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] font-medium leading-tight">{action.label}</span>
               </Button>
             ))}
           </div>
@@ -171,19 +231,31 @@ export function AiCoachModule() {
 
       {/* Chat Area */}
       <Card className="flex flex-col">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bot className="size-5" />
-            AI Coach Chat
-          </CardTitle>
-          <CardDescription>
-            Ask anything about your goals, progress, or get personalized advice.
-          </CardDescription>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Bot className="size-4" />
+                AI Coach
+                {loading && (
+                  <Badge variant="secondary" className="text-[10px] animate-pulse">
+                    Analyzing...
+                  </Badge>
+                )}
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Tanyakan apa saja tentang data, progress, goals, atau minta strategi.
+              </CardDescription>
+            </div>
+            <Badge variant="outline" className="text-[10px] shrink-0">
+              {messages.length - 1} messages
+            </Badge>
+          </div>
         </CardHeader>
         <Separator className="mx-6" />
         <CardContent className="flex-1 flex flex-col min-h-0 p-0">
           {/* Messages */}
-          <ScrollArea className="flex-1 px-6 py-4" style={{ maxHeight: '500px' }}>
+          <ScrollArea className="flex-1 px-6 py-4" style={{ maxHeight: '560px' }}>
             <div className="space-y-4">
               {messages.map((msg) => (
                 <div
@@ -195,7 +267,7 @@ export function AiCoachModule() {
                     className={`flex size-8 shrink-0 items-center justify-center rounded-full ${
                       msg.role === 'user'
                         ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
+                        : 'bg-primary/10 text-primary'
                     }`}
                   >
                     {msg.role === 'user' ? (
@@ -206,15 +278,15 @@ export function AiCoachModule() {
                   </div>
                   {/* Bubble */}
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 ${
                       msg.role === 'user'
                         ? 'bg-primary text-primary-foreground rounded-br-md'
-                        : 'bg-muted rounded-bl-md'
+                        : 'bg-muted/80 border border-border/50 rounded-bl-md'
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                    <div className="text-sm whitespace-pre-wrap leading-relaxed prose prose-sm dark:prose-invert max-w-none [&_strong]:font-semibold [&_strong]:text-primary [&_li]:marker:text-primary/50">
                       {msg.content}
-                    </p>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -222,14 +294,17 @@ export function AiCoachModule() {
               {/* Typing Indicator */}
               {loading && (
                 <div className="flex gap-3">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <Bot className="size-4" />
                   </div>
-                  <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <span className="size-2 rounded-full bg-muted-foreground/40 animate-bounce [animation-delay:0ms]" />
-                      <span className="size-2 rounded-full bg-muted-foreground/40 animate-bounce [animation-delay:150ms]" />
-                      <span className="size-2 rounded-full bg-muted-foreground/40 animate-bounce [animation-delay:300ms]" />
+                  <div className="bg-muted/80 border border-border/50 rounded-2xl rounded-bl-md px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <span className="size-2 rounded-full bg-primary/40 animate-bounce [animation-delay:0ms]" />
+                        <span className="size-2 rounded-full bg-primary/40 animate-bounce [animation-delay:150ms]" />
+                        <span className="size-2 rounded-full bg-primary/40 animate-bounce [animation-delay:300ms]" />
+                      </div>
+                      <span className="text-xs text-muted-foreground">Menganalisis data dashboard...</span>
                     </div>
                   </div>
                 </div>
@@ -247,7 +322,7 @@ export function AiCoachModule() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask your AI Coach anything..."
+              placeholder="Tanya tentang data kamu, minta analisis, atau strategi..."
               className="flex-1"
               disabled={loading}
             />
