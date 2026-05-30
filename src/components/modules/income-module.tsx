@@ -284,7 +284,7 @@ export function IncomeModule() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Total Income</p>
-                <p className="text-2xl font-bold">{loading ? <Skeleton className="h-8 w-24" /> : formatCurrency(totalIncome)}</p>
+                <span className="text-2xl font-bold block">{loading ? <Skeleton className="h-8 w-24" /> : formatCurrency(totalIncome)}</span>
                 {currency === 'IDR' && (
                   <p className="text-[10px] text-muted-foreground">${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })} USD</p>
                 )}
@@ -300,7 +300,7 @@ export function IncomeModule() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">This Month</p>
-                <p className="text-2xl font-bold">{loading ? <Skeleton className="h-8 w-24" /> : formatCurrency(monthlyIncome)}</p>
+                <span className="text-2xl font-bold block">{loading ? <Skeleton className="h-8 w-24" /> : formatCurrency(monthlyIncome)}</span>
                 {currency === 'IDR' && (
                   <p className="text-[10px] text-muted-foreground">${monthlyIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })} USD</p>
                 )}
@@ -316,7 +316,7 @@ export function IncomeModule() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Total Entries</p>
-                <p className="text-2xl font-bold">{loading ? <Skeleton className="h-8 w-16" /> : entries.length}</p>
+                <span className="text-2xl font-bold block">{loading ? <Skeleton className="h-8 w-16" /> : entries.length}</span>
               </div>
             </div>
           </CardContent>
