@@ -122,14 +122,14 @@ function AppSidebar() {
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                   <Image
                     src="/logo.png"
-                    alt="Nevgo"
+                    alt="RAYMANAIYA"
                     width={32}
                     height={32}
                     className="rounded-lg"
                   />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold text-sm">Nevgo</span>
+                  <span className="font-semibold text-sm">RAYMANAIYA</span>
                   <span className="text-xs text-muted-foreground">Mission Control</span>
                 </div>
               </div>
