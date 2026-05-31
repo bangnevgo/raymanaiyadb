@@ -17,7 +17,6 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
-  SidebarSeparator,
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
@@ -154,19 +153,12 @@ function AppSidebar() {
         </SidebarMenu>
       </SidebarHeader>
 
-      <Separator className="mx-2" />
-
-      <SidebarContent>
+      <SidebarContent className="pt-2">
         <NavSection label="Main" items={mainNav} />
-        <SidebarSeparator />
         <NavSection label="Growth" items={growthNav} />
-        <SidebarSeparator />
         <NavSection label="Career" items={careerNav} />
-        <SidebarSeparator />
         <NavSection label="Review" items={reviewNav} />
-        <SidebarSeparator />
         <NavSection label="Program" items={programNav} />
-        <SidebarSeparator />
         <NavSection label="System" items={systemNav} />
       </SidebarContent>
 
