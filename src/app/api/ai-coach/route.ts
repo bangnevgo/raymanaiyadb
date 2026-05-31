@@ -220,7 +220,7 @@ export async function POST(request: Request) {
         currency: currentCurrency,
         exchangeRate: currentRate,
         currencyNote: currentCurrency === 'IDR'
-          ? \`User prefers IDR (Rupiah). All income amounts are stored in USD. 1 USD = \${currentRate} IDR (source: Bank Indonesia). When displaying income, convert to IDR by multiplying by \${currentRate}. Format IDR as "Rp" with no decimals (e.g., Rp57,895,500).\`
+          ? `User prefers IDR (Rupiah). All income amounts are stored in USD. 1 USD = ${currentRate} IDR (source: Bank Indonesia). When displaying income, convert to IDR by multiplying by ${currentRate}. Format IDR as "Rp" with no decimals (e.g., Rp57,895,500).`
           : 'User uses USD for all currency displays.',
       },
 
@@ -325,7 +325,7 @@ export async function POST(request: Request) {
     // ───────────────────────────────────────────
     // 4. COMPREHENSIVE SYSTEM PROMPT
     // ───────────────────────────────────────────
-    const systemPrompt = \`You are the AI Coach for "Nevgo Mission Control" — a Personal Operating System for a Gap Year student.
+    const systemPrompt = `You are the AI Coach for "Nevgo Mission Control" — a Personal Operating System for a Gap Year student.
 
 ## WHO YOU ARE COACHING
 - Age: 17-22 years old, fresh high school graduate
@@ -336,7 +336,7 @@ export async function POST(request: Request) {
 ## YOUR KNOWLEDGE BASE (Real-time Dashboard Data)
 Below is the current state of the user's dashboard. Use this data to provide accurate, specific, and personalized coaching.
 
-\${JSON.stringify(fullContext, null, 2)}
+${JSON.stringify(fullContext, null, 2)}
 
 ## WHAT THE DASHBOARD TRACKS
 - NORTH STAR GOALS: Annual targets, progress, and deadlines.
@@ -372,7 +372,7 @@ Below is the current state of the user's dashboard. Use this data to provide acc
 - Bold key metrics and insights
 - Start with the most important insight
 - End with 2-3 concrete action items
-- Keep responses concise but substantive (200-400 words typically)\`;
+- Keep responses concise but substantive (200-400 words typically)`;
 
     // ───────────────────────────────────────────
     // 5. BUILD MESSAGES ARRAY WITH CONTEXT
@@ -426,13 +426,13 @@ Below is the current state of the user's dashboard. Use this data to provide acc
       }
 
       const cfModel = '@cf/moonshotai/kimi-k2.6';
-      const cfUrl = \`https://api.cloudflare.com/client/v4/accounts/\${accountId}/ai/run/\${cfModel}\`;
+      const cfUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${cfModel}`;
 
       const response = await fetch(cfUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: \`Bearer \${apiToken}\`,
+          Authorization: `Bearer ${apiToken}`,
         },
         body: JSON.stringify({
           messages: messages.map((m) => ({
@@ -445,9 +445,9 @@ Below is the current state of the user's dashboard. Use this data to provide acc
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error(\`[cloudflare] API error:\`, response.status, errText);
+        console.error(`[cloudflare] API error:`, response.status, errText);
         return NextResponse.json(
-          { error: \`Cloudflare AI error (\${response.status}): \${errText.slice(0, 200)}\` },
+          { error: `Cloudflare AI error (${response.status}): ${errText.slice(0, 200)}` },
           { status: 502 }
         );
       }
@@ -470,7 +470,7 @@ Below is the current state of the user's dashboard. Use this data to provide acc
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: \`Bearer \${orApiKey}\`,
+          Authorization: `Bearer ${orApiKey}`,
           'HTTP-Referer': 'http://localhost:3000',
           'X-Title': 'Nevgo Mission Control',
         },
@@ -486,9 +486,9 @@ Below is the current state of the user's dashboard. Use this data to provide acc
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error(\`[openrouter] API error:\`, response.status, errText);
+        console.error(`[openrouter] API error:`, response.status, errText);
         return NextResponse.json(
-          { error: \`OpenRouter error (\${response.status}): \${errText.slice(0, 200)}\` },
+          { error: `OpenRouter error (${response.status}): ${errText.slice(0, 200)}` },
           { status: 502 }
         );
       }
@@ -510,21 +510,21 @@ Below is the current state of the user's dashboard. Use this data to provide acc
           model = 'default';
           break;
         default:
-          return NextResponse.json({ error: \`Unknown provider: \${provider}\` }, { status: 400 });
+          return NextResponse.json({ error: `Unknown provider: ${provider}` }, { status: 400 });
       }
 
       if (!apiKey) {
         return NextResponse.json(
-          { error: \`API key required for \${provider}. Please set it in Settings.\` },
+          { error: `API key required for ${provider}. Please set it in Settings.` },
           { status: 400 }
         );
       }
 
-      const response = await fetch(\`\${baseUrl}/chat/completions\`, {
+      const response = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: \`Bearer \${apiKey}\`,
+          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model,
@@ -538,9 +538,9 @@ Below is the current state of the user's dashboard. Use this data to provide acc
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error(\`[\${provider}] API error:\`, response.status, errText);
+        console.error(`[${provider}] API error:`, response.status, errText);
         return NextResponse.json(
-          { error: \`\${provider} API error (\${response.status}): \${errText.slice(0, 200)}\` },
+          { error: `${provider} API error (${response.status}): ${errText.slice(0, 200)}` },
           { status: 502 }
         );
       }
