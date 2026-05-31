@@ -14,37 +14,45 @@ export async function POST(request: Request) {
     };
 
     // ───────────────────────────────────────────
-    // 1. FETCH COMPLETE DASHBOARD DATA
+    // 1. FETCH COMPLETE DASHBOARD DATA (graceful fallback if DB unavailable)
     // ───────────────────────────────────────────
-    const [
-      goals,
-      certifications,
-      projects,
-      jobs,
-      learningCategories,
-      learningItems,
-      networkingConnections,
-      incomeEntries,
-      journalEntries,
-      weeklyReviews,
-      dailyPlans,
-    ] = await Promise.all([
-      db.northStarGoal.findMany({ orderBy: { createdAt: 'asc' } }),
-      db.certification.findMany({ orderBy: { createdAt: 'asc' } }),
-      db.portfolioProject.findMany({ orderBy: { createdAt: 'asc' } }),
-      db.jobApplication.findMany({ orderBy: { applicationDate: 'desc' } }),
-      db.learningCategory.findMany(),
-      db.learningItem.findMany({ include: { category: true } }),
-      db.networkingConnection.findMany({ orderBy: { connectionDate: 'desc' } }),
-      db.incomeEntry.findMany({ orderBy: { date: 'desc' } }),
-      db.journalEntry.findMany({ orderBy: { date: 'desc' } }),
-      db.weeklyReview.findMany({ orderBy: { weekStartDate: 'desc' } }),
-      db.dailyPlan.findMany({
-        orderBy: { date: 'desc' },
-        take: 7,
-        include: { timeBlocks: true, tasks: true },
-      }),
-    ]);
+    let goals: any[] = [], certifications: any[] = [], projects: any[] = [],
+      jobs: any[] = [], learningCategories: any[] = [], learningItems: any[] = [],
+      networkingConnections: any[] = [], incomeEntries: any[] = [], journalEntries: any[] = [],
+      weeklyReviews: any[] = [], dailyPlans: any[] = [];
+
+    try {
+      const result = await Promise.allSettled([
+        db.northStarGoal.findMany({ orderBy: { createdAt: 'asc' } }),
+        db.certification.findMany({ orderBy: { createdAt: 'asc' } }),
+        db.portfolioProject.findMany({ orderBy: { createdAt: 'asc' } }),
+        db.jobApplication.findMany({ orderBy: { applicationDate: 'desc' } }),
+        db.learningCategory.findMany(),
+        db.learningItem.findMany({ include: { category: true } }),
+        db.networkingConnection.findMany({ orderBy: { connectionDate: 'desc' } }),
+        db.incomeEntry.findMany({ orderBy: { date: 'desc' } }),
+        db.journalEntry.findMany({ orderBy: { date: 'desc' } }),
+        db.weeklyReview.findMany({ orderBy: { weekStartDate: 'desc' } }),
+        db.dailyPlan.findMany({
+          orderBy: { date: 'desc' },
+          take: 7,
+          include: { timeBlocks: true, tasks: true },
+        }),
+      ]);
+      goals = result[0].status === 'fulfilled' ? result[0].value : [];
+      certifications = result[1].status === 'fulfilled' ? result[1].value : [];
+      projects = result[2].status === 'fulfilled' ? result[2].value : [];
+      jobs = result[3].status === 'fulfilled' ? result[3].value : [];
+      learningCategories = result[4].status === 'fulfilled' ? result[4].value : [];
+      learningItems = result[5].status === 'fulfilled' ? result[5].value : [];
+      networkingConnections = result[6].status === 'fulfilled' ? result[6].value : [];
+      incomeEntries = result[7].status === 'fulfilled' ? result[7].value : [];
+      journalEntries = result[8].status === 'fulfilled' ? result[8].value : [];
+      weeklyReviews = result[9].status === 'fulfilled' ? result[9].value : [];
+      dailyPlans = result[10].status === 'fulfilled' ? result[10].value : [];
+    } catch {
+      // DB unavailable — continue with empty data
+    }
 
     // ───────────────────────────────────────────
     // 2. BUILD COMPREHENSIVE USER PROFILE
@@ -411,14 +419,161 @@ Analyze: Task completion rate, planning consistency, reflection habits.
     messages.push({ role: 'user', content: userMessage });
 
     // ───────────────────────────────────────────
-    // 6. CALL AI
+    // 6. CALL AI BASED ON PROVIDER
     // ───────────────────────────────────────────
-    const zai = await ZAI.create();
-    const completion = await zai.chat.completions.create({
-      messages: messages.map((m) => ({ role: m.role as 'system' | 'user' | 'assistant', content: m.content })),
-    });
+    const { provider = 'zai', apiKey, opencodeBaseUrl } = body as {
+      provider?: string;
+      apiKey?: string;
+      opencodeBaseUrl?: string;
+    };
 
-    const advice = completion.choices[0]?.message?.content || 'Maaf, saya tidak bisa menghasilkan analisis saat ini. Silakan coba lagi.';
+    let advice: string;
+
+    if (provider === 'zai') {
+      // Z.AI provider (default, uses SDK — no API key needed)
+      const zai = await ZAI.create();
+      const completion = await zai.chat.completions.create({
+        messages: messages.map((m) => ({
+          role: m.role as 'system' | 'user' | 'assistant',
+          content: m.content,
+        })),
+      });
+      advice = completion.choices[0]?.message?.content || 'Maaf, saya tidak bisa menghasilkan analisis saat ini. Silakan coba lagi.';
+    } else if (provider === 'cloudflare') {
+      // Cloudflare AI — uses Account ID + API Token from env (server-side, secure)
+      const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+      const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+
+      if (!accountId || !apiToken) {
+        return NextResponse.json(
+          { error: 'Cloudflare credentials not configured. Please set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in .env' },
+          { status: 400 }
+        );
+      }
+
+      const cfModel = '@cf/moonshotai/kimi-k2.6';
+      const cfUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${cfModel}`;
+
+      const response = await fetch(cfUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiToken}`,
+        },
+        body: JSON.stringify({
+          messages: messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          max_tokens: 4096,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error(`[cloudflare] API error:`, response.status, errText);
+        return NextResponse.json(
+          { error: `Cloudflare AI error (${response.status}): ${errText.slice(0, 200)}` },
+          { status: 502 }
+        );
+      }
+
+      const data = await response.json();
+      // Cloudflare AI returns result.response directly
+      advice = data.result?.response || data.choices?.[0]?.message?.content || 'Maaf, saya tidak bisa menghasilkan analisis saat ini. Silakan coba lagi.';
+    } else if (provider === 'openrouter') {
+      // OpenRouter — API key dari env (server-side, secure, tidak expose ke client)
+      const orApiKey = process.env.OPENROUTER_API_KEY;
+
+      if (!orApiKey) {
+        return NextResponse.json(
+          { error: 'OpenRouter API key not configured. Please set OPENROUTER_API_KEY in .env' },
+          { status: 400 }
+        );
+      }
+
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${orApiKey}`,
+          'HTTP-Referer': 'http://localhost:3000',
+          'X-Title': 'Nevgo Mission Control',
+        },
+        body: JSON.stringify({
+          model: 'openrouter/owl-alpha',
+          messages: messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          max_tokens: 4096,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error(`[openrouter] API error:`, response.status, errText);
+        return NextResponse.json(
+          { error: `OpenRouter error (${response.status}): ${errText.slice(0, 200)}` },
+          { status: 502 }
+        );
+      }
+
+      const data = await response.json();
+      advice = data.choices?.[0]?.message?.content || 'Maaf, saya tidak bisa menghasilkan analisis saat ini. Silakan coba lagi.';
+    } else {
+      // OpenAI-compatible providers (Nvidia, OpenCode)
+      let baseUrl: string;
+      let model: string;
+
+      switch (provider) {
+        case 'nvidia':
+          baseUrl = 'https://integrate.api.nvidia.com/v1';
+          model = 'meta/llama-3.1-405b-instruct';
+          break;
+        case 'opencode':
+          baseUrl = opencodeBaseUrl || 'http://localhost:4096/v1';
+          model = 'default';
+          break;
+        default:
+          return NextResponse.json({ error: `Unknown provider: ${provider}` }, { status: 400 });
+      }
+
+      if (!apiKey) {
+        return NextResponse.json(
+          { error: `API key required for ${provider}. Please set it in Settings.` },
+          { status: 400 }
+        );
+      }
+
+      const response = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          max_tokens: 4096,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error(`[${provider}] API error:`, response.status, errText);
+        return NextResponse.json(
+          { error: `${provider} API error (${response.status}): ${errText.slice(0, 200)}` },
+          { status: 502 }
+        );
+      }
+
+      const data = await response.json();
+      advice = data.choices?.[0]?.message?.content || 'Maaf, saya tidak bisa menghasilkan analisis saat ini. Silakan coba lagi.';
+    }
 
     return NextResponse.json({ advice });
   } catch (error) {

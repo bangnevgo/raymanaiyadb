@@ -4,7 +4,7 @@ type Page =
   | 'dashboard' | 'goals' | 'daily' | 'learning' | 'certifications'
   | 'portfolio' | 'jobs' | 'networking' | 'income'
   | 'reviews' | 'journal' | 'analytics' | 'ai-coach' | 'habits'
-  | 'program-target';
+  | 'program-target' | 'settings';
 
 type Currency = 'USD' | 'IDR';
 

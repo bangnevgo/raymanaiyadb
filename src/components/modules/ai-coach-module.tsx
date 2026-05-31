@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAppStore } from '@/store/app-store';
+import { useAiProviderStore } from '@/store/ai-provider-store';
 import {
   Card,
   CardContent,
@@ -84,9 +85,18 @@ const DATA_AWARENESS = [
   { label: 'Daily Plans', icon: Target },
 ];
 
+const PROVIDER_LABELS: Record<string, string> = {
+  zai: 'Z.AI',
+  openrouter: 'OpenRouter',
+  nvidia: 'Nvidia',
+  opencode: 'OpenCode',
+  cloudflare: 'Cloudflare AI',
+};
+
 export function AiCoachModule() {
   const { toast } = useToast();
   const { currency, exchangeRate } = useAppStore();
+  const { provider, apiKeys, opencodeBaseUrl } = useAiProviderStore();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -127,6 +137,10 @@ export function AiCoachModule() {
         content: m.content,
       }));
 
+      // API keys for OpenRouter & Cloudflare are server-side (.env) — not sent from client
+      const needsClientKey = provider === 'nvidia' || provider === 'opencode';
+      const apiKey = needsClientKey ? apiKeys[provider as 'nvidia' | 'opencode'] : undefined;
+
       const res = await fetch('/api/ai-coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -135,6 +149,9 @@ export function AiCoachModule() {
           conversationHistory: history,
           currency,
           exchangeRate,
+          provider,
+          apiKey,
+          opencodeBaseUrl,
         }),
       });
 
@@ -257,6 +274,14 @@ export function AiCoachModule() {
               <CardTitle className="flex items-center gap-2 text-base">
                 <Bot className="size-4" />
                 AI Coach
+                <Badge variant="outline" className="text-[10px] text-muted-foreground border-muted-foreground/30">
+                  Via: {PROVIDER_LABELS[provider] || provider}
+                </Badge>
+                {provider !== 'zai' && provider !== 'cloudflare' && provider !== 'openrouter' && !apiKeys[provider as 'nvidia' | 'opencode'] && (
+                  <Badge variant="destructive" className="text-[10px]">
+                    No API Key
+                  </Badge>
+                )}
                 {loading && (
                   <Badge variant="secondary" className="text-[10px] animate-pulse">
                     Analyzing...

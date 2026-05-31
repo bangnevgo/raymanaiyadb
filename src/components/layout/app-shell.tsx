@@ -40,6 +40,7 @@ import {
   ChevronsUpDown,
   Flame,
   MapPin,
+  Settings,
 } from 'lucide-react';
 
 import { NotificationPanel } from '@/components/modules/notification-panel';
@@ -58,6 +59,7 @@ import { AnalyticsModule } from '@/components/modules/analytics-module';
 import { AiCoachModule } from '@/components/modules/ai-coach-module';
 import { HabitModule } from '@/components/modules/habit-module';
 import { ProgramTargetModule } from '@/components/modules/program-target-module';
+import { SettingsModule } from '@/components/modules/settings-module';
 
 interface NavItem {
   page: Page;
@@ -93,6 +95,10 @@ const reviewNav: NavItem[] = [
 
 const programNav: NavItem[] = [
   { page: 'program-target', label: 'Program & Target', icon: MapPin },
+];
+
+const systemNav: NavItem[] = [
+  { page: 'settings', label: 'Settings', icon: Settings },
 ];
 
 function NavSection({ label, items }: { label: string; items: NavItem[] }) {
@@ -160,6 +166,8 @@ function AppSidebar() {
         <NavSection label="Review" items={reviewNav} />
         <SidebarSeparator />
         <NavSection label="Program" items={programNav} />
+        <SidebarSeparator />
+        <NavSection label="System" items={systemNav} />
       </SidebarContent>
 
       <SidebarFooter>
@@ -198,6 +206,7 @@ function PageRenderer() {
     'ai-coach': <AiCoachModule />,
     habits: <HabitModule />,
     'program-target': <ProgramTargetModule />,
+    settings: <SettingsModule />,
   };
 
   return <>{modules[currentPage]}</>;
@@ -266,6 +275,10 @@ function PageHeader() {
     'program-target': {
       title: 'Program & Target',
       description: 'Gap Year Accelerator Program 12 Bulan',
+    },
+    settings: {
+      title: 'Settings',
+      description: 'Configure AI providers and dashboard preferences',
     },
   };
 
