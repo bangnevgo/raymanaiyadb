@@ -209,7 +209,7 @@ export async function POST(request: Request) {
     // ───────────────────────────────────────────
     const currentCurrency = currency || 'USD';
     const currentRate = exchangeRate || 1;
-    
+
     const fullContext = {
       // USER PROFILE
       userProfile: {
@@ -220,7 +220,7 @@ export async function POST(request: Request) {
         currency: currentCurrency,
         exchangeRate: currentRate,
         currencyNote: currentCurrency === 'IDR'
-          ? `User prefers IDR (Rupiah). All income amounts are stored in USD. 1 USD = ${currentRate} IDR (source: Bank Indonesia). When displaying income, convert to IDR by multiplying by ${currentRate}. Format IDR as "Rp" with no decimals (e.g., Rp57,895,500).`
+          ? \`User prefers IDR (Rupiah). All income amounts are stored in USD. 1 USD = \${currentRate} IDR (source: Bank Indonesia). When displaying income, convert to IDR by multiplying by \${currentRate}. Format IDR as "Rp" with no decimals (e.g., Rp57,895,500).\`
           : 'User uses USD for all currency displays.',
       },
 
@@ -325,7 +325,7 @@ export async function POST(request: Request) {
     // ───────────────────────────────────────────
     // 4. COMPREHENSIVE SYSTEM PROMPT
     // ───────────────────────────────────────────
-    const systemPrompt = `You are the AI Coach for "Nevgo Mission Control" — a Personal Operating System for a Gap Year student.
+    const systemPrompt = \`You are the AI Coach for "Nevgo Mission Control" — a Personal Operating System for a Gap Year student.
 
 ## WHO YOU ARE COACHING
 - Age: 17-22 years old, fresh high school graduate
@@ -333,70 +333,46 @@ export async function POST(request: Request) {
 - Goal: Transform from fresh graduate into a globally employable digital professional who earns remote income
 - This dashboard is their MISSION CONTROL — the central hub of their entire gap year journey
 
-## WHAT THE DASHBOARD TRACKS (you have access to ALL of this data)
+## YOUR KNOWLEDGE BASE (Real-time Dashboard Data)
+Below is the current state of the user's dashboard. Use this data to provide accurate, specific, and personalized coaching.
 
-### 1. NORTH STAR GOALS (Annual Targets)
-These are the big-picture 12-month targets. Each has a progress counter and deadline.
-Analyze: Are they on track? Which goals are lagging? Are deadlines realistic?
+\${JSON.stringify(fullContext, null, 2)}
 
-### 2. LEARNING TRACKER
-Skills organized by category: English, AI, Technology, Business.
-Each item has: progress %, hours spent, learning streak (consecutive days), last studied date.
-Analyze: Learning consistency, skill gaps, stalled items (0 streak), category balance.
-
-### 3. CERTIFICATIONS
-Professional certs from providers like Google, Microsoft, IBM.
-Statuses: Planned → In Progress → Completed.
-Analyze: Completion rate, which certs to prioritize, time-to-completion estimates.
-
-### 4. PORTFOLIO PROJECTS
-Creative projects with workflow: Idea → Planning → Building → Review → Published.
-Each has: title, description, skills used, AI tools used, link.
-Analyze: Pipeline health (too many ideas? not enough published?), skill diversity, AI utilization.
-
-### 5. JOB APPLICATIONS (CRM Pipeline)
-Full job search pipeline: Wishlist → Applied → Assessment → Interview → Offer → Rejected/Accept.
-Each has: company, position, country, salary range, date, notes.
-Analyze: Conversion rate, pipeline stage distribution, response patterns, geographic spread.
-
-### 6. NETWORKING CRM
-Professional connections across LinkedIn, Discord, X, Email, Communities.
-Tracks: connection date, last interaction, notes.
-Analyze: Network growth, stale connections (>30 days no contact), platform diversity.
-
-### 7. INCOME TRACKER
-All earnings: Freelance, Remote Job, Affiliate, Project, Other.
-Analyze: Income trends, category breakdown, growth rate, sustainability.
-
-### 8. WEEKLY REVIEWS
-Structured weekly reflections: Wins, Learnings, Challenges, Next Week Goals.
-Analyze: Recurring challenges, learning patterns, goal-setting consistency.
-
-### 9. PERSONAL JOURNAL
-Daily entries with: mood (Great/Good/Neutral/Bad/Terrible), energy level (1-10), reflection.
-Analyze: Mood/energy patterns, correlation between activity levels and mood, burnout signals.
-
-### 10. DAILY COMMAND CENTER
-Daily planning: Top 3 priorities, tasks with completion, time blocks (schedule), notes, reflection.
-Analyze: Task completion rate, planning consistency, reflection habits.
+## WHAT THE DASHBOARD TRACKS
+- NORTH STAR GOALS: Annual targets, progress, and deadlines.
+- LEARNING TRACKER: Skills, progress %, hours, and streaks.
+- CERTIFICATIONS: Professional certs and their statuses.
+- PORTFOLIO PROJECTS: Creative pipeline from Idea to Published.
+- JOB APPLICATIONS: CRM Pipeline from Wishlist to Accepted.
+- NETWORKING CRM: Professional connections and interaction dates.
+- INCOME TRACKER: Earnings across various categories.
+- WEEKLY REVIEWS: Wins, Learnings, Challenges, and Next Goals.
+- PERSONAL JOURNAL: Daily mood and energy levels.
+- DAILY COMMAND CENTER: Priorities and task completion rates.
 
 ## YOUR COACHING PRINCIPLES
+1. **DATA-DRIVEN**: Always reference specific numbers, percentages, and patterns from the data provided above.
+2. **HOLISTIC**: Connect insights across modules. E.g., "Your mood dropped when you stopped learning for 3 days."
+3. **PATTERN RECOGNITION**: Identify trends (e.g., learning streaks ending, mood correlations).
+4. **ACTIONABLE**: Every recommendation must be specific and doable THIS WEEK.
+5. **PRIORITIZED**: Tell the user what matters MOST right now.
+6. **SUPPORTIVE BUT HONEST**: Celebrate wins, but call out concerning patterns directly.
+7. **CONTEXT-AWARE**: Advice should match a gap year student's life stage.
+8. **INDONESIAN-FRIENDLY**: User understands English and Indonesian. Use English primarily but feel free to use Indonesian naturally.
 
-1. **DATA-DRIVEN**: Always reference specific numbers, percentages, and patterns from the data. Never give generic advice.
-2. **HOLISTIC**: Connect insights across modules. E.g., "Your mood dropped when you stopped learning for 3 days" or "Your job application conversion improved after you added 2 portfolio projects."
-3. **PATTERN RECOGNITION**: Identify trends that the user might not see — learning streaks ending, networking gaps, income fluctuations, mood correlations.
-4. **ACTIONABLE**: Every recommendation must be specific and doable THIS WEEK. Not "improve networking" but "Reach out to 3 stale LinkedIn connections this week."
-5. **PRIORITIZED**: Tell the user what matters MOST right now, not a laundry list of everything.
-6. **SUPPORTIVE BUT HONEST**: Celebrate real wins. Call out concerning patterns. Be direct about risks.
-7. **CONTEXT-AWARE**: Remember this is a gap year student — advice should match their life stage. Not corporate advice.
-8. **INDONESIAN-FRIENDLY**: The user understands both English and Indonesian. Use English primarily but you may include Indonesian phrases or references naturally.
+## CONVERSATION STYLE
+- Maintain a continuous, conversational flow.
+- If the user asks a simple question, answer concisely.
+- If the user asks for analysis, be detailed and data-driven.
+- Do not repeat the entire data analysis in every response unless asked.
+- Treat this as a long-term coaching relationship.
 
 ## RESPONSE FORMAT
 - Use bullet points and short paragraphs
 - Bold key metrics and insights
 - Start with the most important insight
 - End with 2-3 concrete action items
-- Keep responses concise but substantive (200-400 words typically)`;
+- Keep responses concise but substantive (200-400 words typically)\`;
 
     // ───────────────────────────────────────────
     // 5. BUILD MESSAGES ARRAY WITH CONTEXT
@@ -413,10 +389,8 @@ Analyze: Task completion rate, planning consistency, reflection habits.
       }
     }
 
-    // Build the user message with full dashboard data context
-    const userMessage = `The user says:\n"${message}"\n\nHere is their COMPLETE dashboard data for analysis:\n\n${JSON.stringify(fullContext, null, 2)}\n\nBased on ALL the data above, provide a comprehensive, data-driven response to the user's message. Reference specific numbers, identify patterns across modules, and give actionable recommendations.`;
-
-    messages.push({ role: 'user', content: userMessage });
+    // The user message is now pure, allowing for natural conversation flow
+    messages.push({ role: 'user', content: message });
 
     // ───────────────────────────────────────────
     // 6. CALL AI BASED ON PROVIDER
@@ -452,13 +426,13 @@ Analyze: Task completion rate, planning consistency, reflection habits.
       }
 
       const cfModel = '@cf/moonshotai/kimi-k2.6';
-      const cfUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${cfModel}`;
+      const cfUrl = \`https://api.cloudflare.com/client/v4/accounts/\${accountId}/ai/run/\${cfModel}\`;
 
       const response = await fetch(cfUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiToken}`,
+          Authorization: \`Bearer \${apiToken}\`,
         },
         body: JSON.stringify({
           messages: messages.map((m) => ({
@@ -471,9 +445,9 @@ Analyze: Task completion rate, planning consistency, reflection habits.
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error(`[cloudflare] API error:`, response.status, errText);
+        console.error(\`[cloudflare] API error:\`, response.status, errText);
         return NextResponse.json(
-          { error: `Cloudflare AI error (${response.status}): ${errText.slice(0, 200)}` },
+          { error: \`Cloudflare AI error (\${response.status}): \${errText.slice(0, 200)}\` },
           { status: 502 }
         );
       }
@@ -496,7 +470,7 @@ Analyze: Task completion rate, planning consistency, reflection habits.
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${orApiKey}`,
+          Authorization: \`Bearer \${orApiKey}\`,
           'HTTP-Referer': 'http://localhost:3000',
           'X-Title': 'Nevgo Mission Control',
         },
@@ -512,9 +486,9 @@ Analyze: Task completion rate, planning consistency, reflection habits.
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error(`[openrouter] API error:`, response.status, errText);
+        console.error(\`[openrouter] API error:\`, response.status, errText);
         return NextResponse.json(
-          { error: `OpenRouter error (${response.status}): ${errText.slice(0, 200)}` },
+          { error: \`OpenRouter error (\${response.status}): \${errText.slice(0, 200)}\` },
           { status: 502 }
         );
       }
@@ -536,21 +510,21 @@ Analyze: Task completion rate, planning consistency, reflection habits.
           model = 'default';
           break;
         default:
-          return NextResponse.json({ error: `Unknown provider: ${provider}` }, { status: 400 });
+          return NextResponse.json({ error: \`Unknown provider: \${provider}\` }, { status: 400 });
       }
 
       if (!apiKey) {
         return NextResponse.json(
-          { error: `API key required for ${provider}. Please set it in Settings.` },
+          { error: \`API key required for \${provider}. Please set it in Settings.\` },
           { status: 400 }
         );
       }
 
-      const response = await fetch(`${baseUrl}/chat/completions`, {
+      const response = await fetch(\`\${baseUrl}/chat/completions\`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: \`Bearer \${apiKey}\`,
         },
         body: JSON.stringify({
           model,
@@ -564,9 +538,9 @@ Analyze: Task completion rate, planning consistency, reflection habits.
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error(`[${provider}] API error:`, response.status, errText);
+        console.error(\`[\${provider}] API error:\`, response.status, errText);
         return NextResponse.json(
-          { error: `${provider} API error (${response.status}): ${errText.slice(0, 200)}` },
+          { error: \`\${provider} API error (\${response.status}): \${errText.slice(0, 200)}\` },
           { status: 502 }
         );
       }
