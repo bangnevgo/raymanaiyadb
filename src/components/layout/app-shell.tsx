@@ -182,26 +182,31 @@ function AppSidebar() {
 function PageRenderer() {
   const { currentPage } = useAppStore();
 
-  const modules: Record<Page, React.ReactNode> = {
-    dashboard: <DashboardModule />,
-    goals: <GoalsModule />,
-    daily: <DailyModule />,
-    learning: <LearningModule />,
-    certifications: <CertificationsModule />,
-    portfolio: <PortfolioModule />,
-    jobs: <JobsModule />,
-    networking: <NetworkingModule />,
-    income: <IncomeModule />,
-    reviews: <ReviewsModule />,
-    journal: <JournalModule />,
-    analytics: <AnalyticsModule />,
-    'ai-coach': <AiCoachModule />,
-    habits: <HabitModule />,
-    'program-target': <ProgramTargetModule />,
-    settings: <SettingsModule />,
-  };
+  return (
+    <>
+      {/* Modules yang perlu persist state (tidak boleh unmount) */}
+      <div style={{ display: currentPage === 'ai-coach' ? 'block' : 'none' }}>
+        <AiCoachModule />
+      </div>
 
-  return <>{modules[currentPage]}</>;
+      {/* Modules biasa — hanya render saat aktif */}
+      {currentPage === 'dashboard' && <DashboardModule />}
+      {currentPage === 'goals' && <GoalsModule />}
+      {currentPage === 'daily' && <DailyModule />}
+      {currentPage === 'learning' && <LearningModule />}
+      {currentPage === 'certifications' && <CertificationsModule />}
+      {currentPage === 'portfolio' && <PortfolioModule />}
+      {currentPage === 'jobs' && <JobsModule />}
+      {currentPage === 'networking' && <NetworkingModule />}
+      {currentPage === 'income' && <IncomeModule />}
+      {currentPage === 'reviews' && <ReviewsModule />}
+      {currentPage === 'journal' && <JournalModule />}
+      {currentPage === 'analytics' && <AnalyticsModule />}
+      {currentPage === 'habits' && <HabitModule />}
+      {currentPage === 'program-target' && <ProgramTargetModule />}
+      {currentPage === 'settings' && <SettingsModule />}
+    </>
+  );
 }
 
 function PageHeader() {
