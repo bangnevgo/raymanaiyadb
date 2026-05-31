@@ -314,7 +314,7 @@ export function AiCoachModule() {
         <Separator className="mx-6" />
         <CardContent className="flex-1 flex flex-col min-h-0 p-0">
           {/* Messages */}
-          <ScrollArea className="flex-1 px-6 py-4" style={{ maxHeight: '560px' }}>
+          <ScrollArea className="h-[560px] px-6 py-4">
             <div className="space-y-4">
               {messages.map((msg) => (
                 <div
